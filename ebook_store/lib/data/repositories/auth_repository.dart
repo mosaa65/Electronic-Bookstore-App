@@ -17,12 +17,15 @@ class AuthRepository {
   // Sign in with email and password
   Future<UserModel?> signInWithEmail(String email, String password) async {
     try {
+      print('DEBUG REPO: Calling signInWithEmailAndPassword...');
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      print('DEBUG REPO: signInWithEmailAndPassword returned. User: ${credential.user?.uid}');
 
       if (credential.user != null) {
+        print('DEBUG REPO: Fetching user data via getUserData...');
         return await getUserData(credential.user!.uid);
       }
       return null;
@@ -38,10 +41,12 @@ class AuthRepository {
     required String displayName,
   }) async {
     try {
+      print('DEBUG REPO: Calling createUserWithEmailAndPassword...');
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      print('DEBUG REPO: createUserWithEmailAndPassword returned. User: ${credential.user?.uid}');
 
       if (credential.user != null) {
         // Update display name
@@ -57,10 +62,12 @@ class AuthRepository {
           updatedAt: DateTime.now(),
         );
 
+        print('DEBUG REPO: Setting user doc in Firestore...');
         await _firestore
             .collection('users')
             .doc(credential.user!.uid)
             .set(userModel.toJson());
+        print('DEBUG REPO: User doc created.');
 
         return userModel;
       }
@@ -134,16 +141,32 @@ class AuthRepository {
     }
   }
 
-  // Get user data from Firestore
   Future<UserModel?> getUserData(String uid) async {
     try {
+      print('DEBUG REPO: getUserData called for $uid');
       final doc = await _firestore.collection('users').doc(uid).get();
+      print('DEBUG REPO: Firestore doc retrieved. Exists: ${doc.exists}');
       if (doc.exists) {
         return UserModel.fromJson(doc.data()!);
       }
       return null;
     } catch (e) {
-      throw Exception('خطأ في جلب بيانات المستخدم: ${e.toString()}');
+      print('DEBUG: Error getting user data: $e');
+      // Return null instead of throwing to allow debugging
+      return null;
+      // throw Exception('خطأ في جلب بيانات المستخدم: ${e.toString()}');
+    }
+  }
+
+  // Create user document
+  Future<void> createUser(UserModel user) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(user.toJson());
+    } catch (e) {
+      throw Exception('خطأ في إنشاء ملف المستخدم: ${e.toString()}');
     }
   }
 

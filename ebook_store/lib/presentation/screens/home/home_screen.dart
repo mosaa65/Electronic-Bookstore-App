@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/book_model.dart';
+import '../../providers/auth_provider.dart';
+import '../cart/cart_screen.dart';
+import '../library/my_library_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,7 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.shopping_cart_outlined),
             onPressed: () {
-              // TODO: Navigate to cart
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CartScreen(),
+                ),
+              );
             },
           ),
         ],
@@ -71,47 +81,72 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: AppColors.primaryColor),
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        final user = authProvider.currentUser;
+        
+        return Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.primaryGradient,
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'أحمد محمد',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white,
+                      backgroundImage: user?.photoURL != null
+                          ? NetworkImage(user!.photoURL!)
+                          : null,
+                      child: user?.photoURL == null
+                          ? Icon(
+                              Icons.person,
+                              size: 40,
+                              color: AppColors.primaryColor,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      user?.displayName ?? 'مستخدم',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      user?.email ?? '',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  'user@email.com',
-                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                ),
-              ],
-            ),
-          ),
+              ),
           ListTile(
             leading: const Icon(Icons.home),
             title: Text(AppStrings.home),
             onTap: () => Navigator.pop(context),
           ),
-          ListTile(
-            leading: const Icon(Icons.library_books),
-            title: Text(AppStrings.myLibrary),
-            onTap: () {
-              // TODO: Navigate to library
-            },
-          ),
+            ListTile(
+              leading: const Icon(Icons.library_books),
+              title: Text(AppStrings.myLibrary),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MyLibraryScreen(),
+                  ),
+                );
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.favorite),
             title: Text(AppStrings.favorites),
@@ -119,21 +154,31 @@ class _HomeScreenState extends State<HomeScreen> {
               // TODO: Navigate to favorites
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.shopping_cart),
-            title: Text(AppStrings.cart),
-            onTap: () {
-              // TODO: Navigate to cart
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: Text(AppStrings.profile),
-            onTap: () {
-              // TODO: Navigate to profile
-            },
-          ),
+            ListTile(
+              leading: const Icon(Icons.shopping_cart),
+              title: Text(AppStrings.cart),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CartScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(AppStrings.profile),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: Text(AppStrings.settings),
@@ -141,17 +186,47 @@ class _HomeScreenState extends State<HomeScreen> {
               // TODO: Navigate to settings
             },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.errorColor),
-            title: Text(AppStrings.logout, style: const TextStyle(color: AppColors.errorColor)),
-            onTap: () {
-              // TODO: Implement logout
-            },
-          ),
-        ],
-      ),
-    );
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.errorColor),
+              title: Text(
+                AppStrings.logout,
+                style: const TextStyle(color: AppColors.errorColor),
+              ),
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('تسجيل الخروج'),
+                    content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('إلغاء'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.errorColor,
+                        ),
+                        child: const Text('تسجيل الخروج'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && context.mounted) {
+                  await authProvider.signOut();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSectionTitle(String title) {

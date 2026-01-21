@@ -80,6 +80,11 @@ class BookProvider with ChangeNotifier {
     }
   }
 
+  // Fetch book by ID (alias for getBookById)
+  Future<void> fetchBookById(String bookId) async {
+    await getBookById(bookId);
+  }
+
   // Search books
   Future<void> searchBooks(String query) async {
     _setLoading(true);

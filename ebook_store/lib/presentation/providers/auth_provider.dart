@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/models/user_model.dart';
 
@@ -17,13 +18,46 @@ class AuthProvider with ChangeNotifier {
 
   AuthProvider() {
     _initializeUser();
+    // Listen to auth state changes
+    _authRepository.authStateChanges.listen((User? user) {
+      if (user == null) {
+        _currentUser = null;
+        notifyListeners();
+      } else if (_currentUser == null) {
+        // If user is logged in but local state is null, fetch data
+        _initializeUser();
+      }
+    });
   }
 
   // Initialize user from Firebase
   Future<void> _initializeUser() async {
+    print('DEBUG: _initializeUser called');
     final user = _authRepository.currentUser;
+    print('DEBUG: Current Firebase User: ${user?.uid}');
+
     if (user != null) {
-      _currentUser = await _authRepository.getUserData(user.uid);
+      try {
+        print('DEBUG: Fetching user data from Firestore...');
+        _currentUser = await _authRepository.getUserData(user.uid);
+        print('DEBUG: Firestore Data: ${_currentUser != null ? "Found" : "Not Found"}');
+
+        if (_currentUser == null) {
+            // Fallback if Firestore fails: create partial user from Auth
+            print('DEBUG: Firestore user data missing, using Auth data');
+            _currentUser = UserModel(
+               uid: user.uid,
+               email: user.email ?? '',
+               displayName: user.displayName ?? 'مستخدم',
+               role: 'user',
+               createdAt: DateTime.now(),
+               updatedAt: DateTime.now(),
+               photoURL: user.photoURL,
+            );
+        }
+      } catch (e) {
+         print('DEBUG: Error in _initializeUser: $e');
+      }
       notifyListeners();
     }
   }
@@ -32,13 +66,25 @@ class AuthProvider with ChangeNotifier {
   Future<bool> signInWithEmail(String email, String password) async {
     _setLoading(true);
     _errorMessage = null;
+    print('DEBUG: Attempting login for $email');
 
     try {
-      _currentUser = await _authRepository.signInWithEmail(email, password);
-      _setLoading(false);
-      return _currentUser != null;
+      final user = await _authRepository.signInWithEmail(email, password);
+      print('DEBUG: Auth successful for ${user?.uid}');
+      
+      if (user != null) {
+        await _initializeUser();
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'فشل تسجيل الدخول: مستخدم غير موجود';
+        print('DEBUG: Login failed: User is null');
+        _setLoading(false);
+        return false;
+      }
     } catch (e) {
       _errorMessage = e.toString();
+      print('DEBUG: Login exception: $e');
       _setLoading(false);
       return false;
     }
@@ -52,17 +98,50 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
+    print('DEBUG: Attempting register for $email');
 
     try {
-      _currentUser = await _authRepository.registerWithEmail(
+      final user = await _authRepository.registerWithEmail(
         email: email,
         password: password,
         displayName: displayName,
       );
-      _setLoading(false);
-      return _currentUser != null;
+      
+      print('DEBUG: Register Auth successful: ${user?.uid}');
+
+      if (user != null) {
+        // Create user in Firestore
+        final newUser = UserModel(
+          uid: user.uid,
+          email: email,
+          displayName: displayName,
+          role: 'user',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        try {
+            print('DEBUG: Creating Firestore document...');
+            await _authRepository.createUser(newUser);
+            print('DEBUG: Firestore document created');
+        } catch (e) {
+             print('DEBUG: Firestore creation failed: $e');
+             // Continue anyway since Auth succeeded
+        }
+
+        _currentUser = newUser;
+        notifyListeners();
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'فشل إنشاء الحساب';
+        print('DEBUG: Register failed: User is null');
+        _setLoading(false);
+        return false;
+      }
     } catch (e) {
       _errorMessage = e.toString();
+      print('DEBUG: Register exception: $e');
       _setLoading(false);
       return false;
     }

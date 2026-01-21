@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -29,18 +31,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // TODO: Implement Firebase login
-      await Future.delayed(const Duration(seconds: 2));
+      final success = await authProvider.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
       
-      setState(() => _isLoading = false);
+      if (!mounted) return;
       
-      if (mounted) {
+      if (success) {
+        // Navigation handled by Consumer in main
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تسجيل الدخول قيد التطوير'),
-            backgroundColor: AppColors.primaryColor,
+          SnackBar(
+            content: Text('مرحباً ${authProvider.currentUser?.displayName ?? ""}!'),
+            backgroundColor: AppColors.successColor,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول'),
+            backgroundColor: AppColors.errorColor,
           ),
         );
       }
@@ -48,13 +60,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-    // TODO: Implement Google Sign-In
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تسجيل الدخول بـ Google قيد التطوير'),
-        backgroundColor: AppColors.primaryColor,
-      ),
-    );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    final success = await authProvider.signInWithGoogle();
+    
+    if (!mounted) return;
+    
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('مرحباً ${authProvider.currentUser?.displayName ?? ""}!'),
+          backgroundColor: AppColors.successColor,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول بـ Google'),
+          backgroundColor: AppColors.errorColor,
+        ),
+      );
+    }
   }
 
   @override
@@ -157,10 +183,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 
                 // Login Button
-                CustomButton(
-                  text: AppStrings.login,
-                  onPressed: _handleLogin,
-                  isLoading: _isLoading,
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return CustomButton(
+                      text: AppStrings.login,
+                      onPressed: _handleLogin,
+                      isLoading: authProvider.isLoading,
+                    );
+                  },
                 ),
                 
                 const SizedBox(height: 16),

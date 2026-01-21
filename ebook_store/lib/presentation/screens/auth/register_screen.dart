@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -33,18 +35,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // TODO: Implement Firebase register
-      await Future.delayed(const Duration(seconds: 2));
+      final success = await authProvider.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        displayName: _nameController.text.trim(),
+      );
       
-      setState(() => _isLoading = false);
+      if (!mounted) return;
       
-      if (mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('التسجيل قيد التطوير'),
+          SnackBar(
+            content: Text('مرحباً ${authProvider.currentUser?.displayName}! تم إنشاء حسابك بنجاح'),
             backgroundColor: AppColors.successColor,
+          ),
+        );
+        // Navigation handled by Consumer in main
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'فشل التسجيل'),
+            backgroundColor: AppColors.errorColor,
           ),
         );
       }
@@ -147,10 +161,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 const SizedBox(height: 32),
                 
-                CustomButton(
-                  text: AppStrings.register,
-                  onPressed: _handleRegister,
-                  isLoading: _isLoading,
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return CustomButton(
+                      text: AppStrings.register,
+                      onPressed: _handleRegister,
+                      isLoading: authProvider.isLoading,
+                    );
+                  },
                 ),
                 
                 const SizedBox(height: 24),
