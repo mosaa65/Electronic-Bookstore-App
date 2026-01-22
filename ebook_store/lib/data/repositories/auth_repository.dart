@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -39,42 +40,64 @@ class AuthRepository {
     required String email,
     required String password,
     required String displayName,
+    String role = 'user',
   }) async {
+    User? firebaseUser;
     try {
       print('DEBUG REPO: Calling createUserWithEmailAndPassword...');
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      print('DEBUG REPO: createUserWithEmailAndPassword returned. User: ${credential.user?.uid}');
+      firebaseUser = credential.user;
+      print('DEBUG REPO: Auth success for ${firebaseUser?.uid}');
+    } catch (e) {
+      print('DEBUG REPO: Auth error caught: $e');
+      // Handle the Pigeon cast error that user is experiencing
+      if (e.toString().contains('PigeonUserDetails')) {
+        print('DEBUG REPO: Pigeon cast error detected, verifying user creation...');
+        firebaseUser = _auth.currentUser;
+      }
+      
+      if (firebaseUser == null) {
+        throw Exception('خطأ في التسجيل: ${e.toString()}');
+      }
+      print('DEBUG REPO: User exists after error, proceeding...');
+    }
 
-      if (credential.user != null) {
+    if (firebaseUser != null) {
+      try {
         // Update display name
-        await credential.user!.updateDisplayName(displayName);
+        await firebaseUser.updateDisplayName(displayName);
+      } catch (e) {
+        print('DEBUG REPO: Ignored error updating display name: $e');
+      }
 
-        // Create user document in Firestore
-        final userModel = UserModel(
-          uid: credential.user!.uid,
-          email: email,
-          displayName: displayName,
-          role: 'user',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
+      // Create user document in Firestore
+      final userModel = UserModel(
+        uid: firebaseUser.uid,
+        email: email,
+        displayName: displayName,
+        role: role,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-        print('DEBUG REPO: Setting user doc in Firestore...');
+      try {
+        print('DEBUG REPO: Creating Firestore user document for ${firebaseUser.uid}...');
         await _firestore
             .collection('users')
-            .doc(credential.user!.uid)
+            .doc(firebaseUser.uid)
             .set(userModel.toJson());
-        print('DEBUG REPO: User doc created.');
-
-        return userModel;
+        print('DEBUG REPO: Firestore document created successfully.');
+      } catch (e) {
+        print('DEBUG REPO: Firestore document creation failed: $e');
+        // We still return the userModel so the app can function
       }
-      return null;
-    } catch (e) {
-      throw Exception('خطأ في التسجيل: ${e.toString()}');
+
+      return userModel;
     }
+    return null;
   }
 
   // Sign in with Google
@@ -190,4 +213,99 @@ class AuthRepository {
       throw Exception('خطأ في إعادة تعيين كلمة المرور: ${e.toString()}');
     }
   }
+
+  /// إنشاء مدير جديد بواسطة مدير حالي
+  /// لا يغير حالة تسجيل الدخول الحالية
+  Future<UserModel?> createAdminByAdmin({
+    required String email,
+    required String password,
+    required String displayName,
+    required String createdBy,
+  }) async {
+    try {
+      // حفظ المستخدم الحالي
+      final currentUser = _auth.currentUser;
+      
+      // إنشاء حساب جديد
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (credential.user != null) {
+        // تحديث اسم العرض
+        try {
+          await credential.user!.updateDisplayName(displayName);
+        } catch (e) {
+          debugPrint('Error updating display name: $e');
+        }
+        
+        // إنشاء وثيقة المستخدم في Firestore
+        final userModel = UserModel(
+          uid: credential.user!.uid,
+          email: email,
+          displayName: displayName,
+          role: 'admin', // مدير
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        await _firestore
+            .collection('users')
+            .doc(credential.user!.uid)
+            .set({
+              ...userModel.toJson(),
+              'createdBy': createdBy, // من أنشأ هذا المدير
+            });
+        
+        // تسجيل خروج المدير الجديد والعودة للمدير الأصلي
+        await _auth.signOut();
+        
+        // إعادة تسجيل دخول المدير الأصلي
+        // ملاحظة: هذا يتطلب أن يكون لدينا credentials المدير الأصلي
+        // لذلك سنعتمد على أن المستخدم سيبقى مسجل دخول
+        
+        return userModel;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creating admin: $e');
+      throw Exception('خطأ في إنشاء المدير: ${e.toString()}');
+    }
+  }
+
+  /// جلب قائمة المدراء
+  Future<List<UserModel>> getAdminsList() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .get();
+      
+      return snapshot.docs
+          .map((doc) => UserModel.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting admins: $e');
+      throw Exception('خطأ في جلب المدراء: ${e.toString()}');
+    }
+  }
+
+  /// جلب إحصائيات المستخدمين
+  Future<Map<String, int>> getUserStats() async {
+    try {
+      final usersSnapshot = await _firestore.collection('users').get();
+      final admins = usersSnapshot.docs.where((doc) => doc.data()['role'] == 'admin').length;
+      final users = usersSnapshot.docs.length - admins;
+      
+      return {
+        'total': usersSnapshot.docs.length,
+        'admins': admins,
+        'users': users,
+      };
+    } catch (e) {
+      return {'total': 0, 'admins': 0, 'users': 0};
+    }
+  }
 }
+

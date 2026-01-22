@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_provider.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
@@ -32,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final loc = AppLocalizations.of(context);
       
       final success = await authProvider.signInWithEmail(
         _emailController.text.trim(),
@@ -41,17 +42,16 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       
       if (success) {
-        // Navigation handled by Consumer in main
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('مرحباً ${authProvider.currentUser?.displayName ?? ""}!'),
+            content: Text('${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!'),
             backgroundColor: AppColors.successColor,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول'),
+            content: Text(authProvider.errorMessage ?? loc.tr('loginFailed')),
             backgroundColor: AppColors.errorColor,
           ),
         );
@@ -61,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final loc = AppLocalizations.of(context);
     
     final success = await authProvider.signInWithGoogle();
     
@@ -69,14 +70,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('مرحباً ${authProvider.currentUser?.displayName ?? ""}!'),
+          content: Text('${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!'),
           backgroundColor: AppColors.successColor,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول بـ Google'),
+          content: Text(authProvider.errorMessage ?? loc.tr('loginFailed')),
           backgroundColor: AppColors.errorColor,
         ),
       );
@@ -85,6 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final localeProvider = context.watch<LocaleProvider>();
+    
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -94,7 +98,22 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                // زر تبديل اللغة
+                Align(
+                  alignment: localeProvider.isArabic 
+                      ? Alignment.centerLeft 
+                      : Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => localeProvider.toggleLocale(),
+                    icon: const Icon(Icons.language, size: 20),
+                    label: Text(
+                      localeProvider.isArabic ? 'English' : 'العربية',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
                 
                 // App Logo
                 Container(
@@ -115,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // App Name
                 Text(
-                  AppStrings.appName,
+                  loc.tr('appName'),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayMedium,
                 ),
@@ -123,7 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 
                 Text(
-                  'مرحباً بك في متجر الكتب الإلكترونية',
+                  loc.isArabic 
+                      ? 'مرحباً بك في متجر الكتب الإلكترونية'
+                      : 'Welcome to the eBook Store',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
@@ -132,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Email Field
                 CustomTextField(
-                  label: AppStrings.email,
+                  label: loc.tr('email'),
                   hint: 'example@email.com',
                   icon: Icons.email_outlined,
                   controller: _emailController,
@@ -144,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Password Field
                 CustomTextField(
-                  label: AppStrings.password,
+                  label: loc.tr('password'),
                   hint: '••••••',
                   icon: Icons.lock_outline,
                   obscureText: _obscurePassword,
@@ -165,13 +186,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Forgot Password
                 Align(
-                  alignment: Alignment.centerRight,
+                  alignment: localeProvider.isArabic 
+                      ? Alignment.centerRight 
+                      : Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () {
                       // TODO: Navigate to forgot password
                     },
                     child: Text(
-                      AppStrings.forgotPassword,
+                      loc.tr('forgotPassword'),
                       style: const TextStyle(
                         color: AppColors.primaryColor,
                         fontWeight: FontWeight.w600,
@@ -186,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, _) {
                     return CustomButton(
-                      text: AppStrings.login,
+                      text: loc.tr('login'),
                       onPressed: _handleLogin,
                       isLoading: authProvider.isLoading,
                     );
@@ -202,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'أو',
+                        loc.isArabic ? 'أو' : 'or',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
@@ -215,14 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Google Sign-In Button
                 OutlinedButton.icon(
                   onPressed: _handleGoogleSignIn,
-                  icon: Image.asset(
-                    'assets/icons/google.png',
-                    height: 24,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.g_mobiledata, size: 24);
-                    },
-                  ),
-                  label: Text(AppStrings.signInWithGoogle),
+                  icon: const Icon(Icons.g_mobiledata, size: 28),
+                  label: Text(loc.tr('signInWithGoogle')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     side: BorderSide(color: Colors.grey.shade300),
@@ -240,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      AppStrings.dontHaveAccount,
+                      loc.tr('dontHaveAccount'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     TextButton(
@@ -253,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: Text(
-                        AppStrings.register,
+                        loc.tr('register'),
                         style: const TextStyle(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.bold,

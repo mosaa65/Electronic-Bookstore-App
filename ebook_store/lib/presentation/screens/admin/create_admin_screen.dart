@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/localization/app_localizations.dart';
-import '../../../core/localization/locale_provider.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../providers/auth_provider.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+/// شاشة إنشاء مدير جديد
+/// متاحة فقط للمدراء الحاليين
+class CreateAdminScreen extends StatefulWidget {
+  const CreateAdminScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<CreateAdminScreen> createState() => _CreateAdminScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _CreateAdminScreenState extends State<CreateAdminScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -23,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,36 +35,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
+  Future<void> _handleCreateAdmin() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+      
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final loc = AppLocalizations.of(context);
       
-      // التسجيل كمستخدم عادي فقط
-      final success = await authProvider.register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        displayName: _nameController.text.trim(),
-        role: 'user', // دائماً مستخدم عادي
-      );
-      
-      if (!mounted) return;
-      
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${loc.tr('welcome')} ${authProvider.currentUser?.displayName}! ${loc.tr('registerSuccess')}'),
-            backgroundColor: AppColors.successColor,
-          ),
+      try {
+        // إنشاء حساب مدير جديد
+        final success = await authProvider.createAdminByAdmin(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          displayName: _nameController.text.trim(),
         );
-        Navigator.pop(context);
-      } else {
+        
+        if (!mounted) return;
+        
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(loc.tr('adminCreated')),
+              backgroundColor: AppColors.successColor,
+            ),
+          );
+          Navigator.pop(context, true); // إرجاع true للتحديث
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? loc.tr('error')),
+              backgroundColor: AppColors.errorColor,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? loc.tr('loginFailed')),
+            content: Text(e.toString()),
             backgroundColor: AppColors.errorColor,
           ),
         );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -70,19 +87,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final localeProvider = context.watch<LocaleProvider>();
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(loc.tr('register')),
-        actions: [
-          // زر تبديل اللغة
-          TextButton.icon(
-            onPressed: () => localeProvider.toggleLocale(),
-            icon: const Icon(Icons.language),
-            label: Text(localeProvider.isArabic ? 'EN' : 'ع'),
-          ),
-        ],
+        title: Text(loc.tr('createAdmin')),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -92,10 +100,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
+                // أيقونة
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings,
+                    size: 60,
+                    color: AppColors.primaryColor,
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
                 
                 Text(
-                  loc.tr('createAccount'),
+                  loc.tr('createAdmin'),
                   style: Theme.of(context).textTheme.displayMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -103,16 +125,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 
                 Text(
-                  loc.tr('fillDataToRegister'),
+                  loc.isArabic 
+                      ? 'أدخل بيانات المدير الجديد' 
+                      : 'Enter new admin details',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 
                 const SizedBox(height: 32),
                 
+                // حقل الاسم
                 CustomTextField(
                   label: loc.tr('displayName'),
-                  hint: localeProvider.isArabic ? 'أحمد محمد' : 'John Doe',
+                  hint: loc.isArabic ? 'اسم المدير' : 'Admin Name',
                   icon: Icons.person_outline,
                   controller: _nameController,
                   validator: (value) => Validators.validateRequired(
@@ -123,9 +148,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 const SizedBox(height: 16),
                 
+                // حقل البريد
                 CustomTextField(
                   label: loc.tr('email'),
-                  hint: 'example@email.com',
+                  hint: 'admin@email.com',
                   icon: Icons.email_outlined,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -134,9 +160,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 const SizedBox(height: 16),
                 
+                // حقل كلمة المرور
                 CustomTextField(
                   label: loc.tr('password'),
-                  hint: '••••••',
+                  hint: '••••••••',
                   icon: Icons.lock_outline,
                   obscureText: _obscurePassword,
                   controller: _passwordController,
@@ -154,9 +181,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 const SizedBox(height: 16),
                 
+                // تأكيد كلمة المرور
                 CustomTextField(
                   label: loc.tr('confirmPassword'),
-                  hint: '••••••',
+                  hint: '••••••••',
                   icon: Icons.lock_outline,
                   obscureText: _obscureConfirmPassword,
                   controller: _confirmPasswordController,
@@ -177,36 +205,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 const SizedBox(height: 32),
                 
-                Consumer<AuthProvider>(
-                  builder: (context, authProvider, _) {
-                    return CustomButton(
-                      text: loc.tr('register'),
-                      onPressed: _handleRegister,
-                      isLoading: authProvider.isLoading,
-                    );
-                  },
+                // ملاحظة
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.warningColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppColors.warningColor,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          loc.isArabic
+                              ? 'سيحصل المدير الجديد على جميع صلاحيات الإدارة'
+                              : 'The new admin will have full admin permissions',
+                          style: TextStyle(
+                            color: AppColors.warningColor.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const SizedBox(height: 24),
                 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      loc.tr('alreadyHaveAccount'),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                // زر الإنشاء
+                CustomButton(
+                  text: loc.tr('createAdmin'),
+                  onPressed: _handleCreateAdmin,
+                  isLoading: _isLoading,
+                  icon: Icons.person_add,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // زر الإلغاء
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        loc.tr('login'),
-                        style: const TextStyle(
-                          color: AppColors.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: Text(loc.tr('cancel')),
                 ),
               ],
             ),

@@ -95,6 +95,7 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String password,
     required String displayName,
+    String role = 'user',
   }) async {
     _setLoading(true);
     _errorMessage = null;
@@ -105,37 +106,18 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
         displayName: displayName,
+        role: role,
       );
       
-      print('DEBUG: Register Auth successful: ${user?.uid}');
+      print('DEBUG: Auth return handled: ${user?.uid}');
 
       if (user != null) {
-        // Create user in Firestore
-        final newUser = UserModel(
-          uid: user.uid,
-          email: email,
-          displayName: displayName,
-          role: 'user',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        try {
-            print('DEBUG: Creating Firestore document...');
-            await _authRepository.createUser(newUser);
-            print('DEBUG: Firestore document created');
-        } catch (e) {
-             print('DEBUG: Firestore creation failed: $e');
-             // Continue anyway since Auth succeeded
-        }
-
-        _currentUser = newUser;
+        _currentUser = user;
         notifyListeners();
         _setLoading(false);
         return true;
       } else {
         _errorMessage = 'فشل إنشاء الحساب';
-        print('DEBUG: Register failed: User is null');
         _setLoading(false);
         return false;
       }
@@ -207,6 +189,49 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = e.toString();
       _setLoading(false);
       return false;
+    }
+  }
+
+  /// إنشاء مدير جديد بواسطة مدير حالي
+  /// متاحة فقط للمدراء
+  Future<bool> createAdminByAdmin({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    // التحقق من أن المستخدم الحالي مدير
+    if (!isAdmin) {
+      _errorMessage = 'غير مصرح لك بإنشاء مدراء';
+      return false;
+    }
+    
+    _setLoading(true);
+    _errorMessage = null;
+    
+    try {
+      final newAdmin = await _authRepository.createAdminByAdmin(
+        email: email,
+        password: password,
+        displayName: displayName,
+        createdBy: _currentUser!.uid,
+      );
+      
+      _setLoading(false);
+      return newAdmin != null;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// جلب قائمة المدراء
+  Future<List<dynamic>> getAdminsList() async {
+    try {
+      return await _authRepository.getAdminsList();
+    } catch (e) {
+      _errorMessage = e.toString();
+      return [];
     }
   }
 

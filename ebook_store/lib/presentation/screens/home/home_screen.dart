@@ -4,9 +4,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/book_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/book_provider.dart';
 import '../cart/cart_screen.dart';
 import '../library/my_library_screen.dart';
 import '../profile/profile_screen.dart';
+import '../admin/admin_dashboard.dart';
+import '../books/book_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +19,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final bookProvider = context.read<BookProvider>();
+      bookProvider.fetchFeaturedBooks();
+      bookProvider.fetchAllBooks();
+    });
+  }
 
   final List<String> _categories = [
     'الكل',
@@ -53,29 +64,54 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       drawer: _buildDrawer(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Featured Books Section
-            _buildSectionTitle(AppStrings.featuredBooks),
-            _buildFeaturedBooks(),
-            
-            const SizedBox(height: 24),
-            
-            // Categories
-            _buildSectionTitle(AppStrings.categories),
-            _buildCategories(),
-            
-            const SizedBox(height: 24),
-            
-            // Best Sellers
-            _buildSectionTitle(AppStrings.bestSellers),
-            _buildBooksGrid(),
-            
-            const SizedBox(height: 24),
-          ],
-        ),
+      body: Consumer<BookProvider>(
+        builder: (context, bookProvider, child) {
+          if (bookProvider.isLoading && bookProvider.allBooks.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (bookProvider.errorMessage != null && bookProvider.allBooks.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   Text(bookProvider.errorMessage!),
+                   ElevatedButton(
+                     onPressed: () => bookProvider.fetchAllBooks(),
+                     child: const Text('إعادة المحاولة'),
+                   ),
+                ],
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Featured Books Section
+                if (bookProvider.featuredBooks.isNotEmpty) ...[
+                  _buildSectionTitle(AppStrings.featuredBooks),
+                  _buildFeaturedBooks(bookProvider.featuredBooks),
+                ],
+                
+                const SizedBox(height: 24),
+                
+                // Categories
+                _buildSectionTitle(AppStrings.categories),
+                _buildCategories(),
+                
+                const SizedBox(height: 24),
+                
+                // All Books / Best Sellers
+                _buildSectionTitle(AppStrings.bestSellers),
+                _buildBooksGrid(bookProvider.filteredBooks),
+                
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -104,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? NetworkImage(user!.photoURL!)
                           : null,
                       child: user?.photoURL == null
-                          ? Icon(
+                          ? const Icon(
                               Icons.person,
                               size: 40,
                               color: AppColors.primaryColor,
@@ -130,103 +166,117 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: Text(AppStrings.home),
-            onTap: () => Navigator.pop(context),
-          ),
-            ListTile(
-              leading: const Icon(Icons.library_books),
-              title: Text(AppStrings.myLibrary),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MyLibraryScreen(),
-                  ),
-                );
-              },
-            ),
-          ListTile(
-            leading: const Icon(Icons.favorite),
-            title: Text(AppStrings.favorites),
-            onTap: () {
-              // TODO: Navigate to favorites
-            },
-          ),
-            ListTile(
-              leading: const Icon(Icons.shopping_cart),
-              title: Text(AppStrings.cart),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CartScreen(),
-                  ),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: Text(AppStrings.profile),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
-                  ),
-                );
-              },
-            ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: Text(AppStrings.settings),
-            onTap: () {
-              // TODO: Navigate to settings
-            },
-          ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.errorColor),
-              title: Text(
-                AppStrings.logout,
-                style: const TextStyle(color: AppColors.errorColor),
+              if (authProvider.isAdmin)
+                ListTile(
+                  leading: const Icon(Icons.admin_panel_settings, color: AppColors.primaryColor),
+                  title: const Text('لوحة تحكم المدير', style: TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.bold)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminDashboard(),
+                      ),
+                    );
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: Text(AppStrings.home),
+                onTap: () => Navigator.pop(context),
               ),
-              onTap: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('تسجيل الخروج'),
-                    content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('إلغاء'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.errorColor,
+              ListTile(
+                leading: const Icon(Icons.library_books),
+                title: Text(AppStrings.myLibrary),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MyLibraryScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.favorite),
+                title: Text(AppStrings.favorites),
+                onTap: () {
+                  // TODO: Navigate to favorites
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shopping_cart),
+                title: Text(AppStrings.cart),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CartScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: Text(AppStrings.profile),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: Text(AppStrings.settings),
+                onTap: () {
+                  // TODO: Navigate to settings
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: AppColors.errorColor),
+                title: Text(
+                  AppStrings.logout,
+                  style: const TextStyle(color: AppColors.errorColor),
+                ),
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('تسجيل الخروج'),
+                      content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('إلغاء'),
                         ),
-                        child: const Text('تسجيل الخروج'),
-                      ),
-                    ],
-                  ),
-                );
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.errorColor,
+                          ),
+                          child: const Text('تسجيل الخروج'),
+                        ),
+                      ],
+                    ),
+                  );
 
-                if (confirm == true && context.mounted) {
-                  await authProvider.signOut();
-                  if (context.mounted) {
-                    Navigator.pop(context);
+                  if (confirm == true && context.mounted) {
+                    await authProvider.signOut();
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   }
-                }
-              },
-            ),
-          ],
-        ),
-      );
-    });
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -252,45 +302,63 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFeaturedBooks() {
+  Widget _buildFeaturedBooks(List<BookModel> books) {
     return SizedBox(
       height: 250,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 5,
+        itemCount: books.length,
         itemBuilder: (context, index) {
-          return _buildFeaturedBookCard(index);
+          return _buildFeaturedBookCard(books[index]);
         },
       ),
     );
   }
 
-  Widget _buildFeaturedBookCard(int index) {
+  Widget _buildFeaturedBookCard(BookModel book) {
     return Container(
       width: 160,
       margin: const EdgeInsets.only(left: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookDetailsScreen(bookId: book.id),
             ),
-            child: const Center(
-              child: Icon(Icons.book, size: 60, color: AppColors.primaryColor),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                image: book.coverImageURL.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(book.coverImageURL),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: book.coverImageURL.isEmpty
+                  ? const Center(
+                      child: Icon(Icons.book, size: 60, color: AppColors.primaryColor),
+                    )
+                  : null,
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'كتاب مميز',
-            style: TextStyle(fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              book.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -310,13 +378,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryChip(int index) {
-    final isSelected = index == 0;
+    // Current category is selected based on index or string comparison
+    // For simplicity, let's keep it simple
+    final isSelected = index == 0; 
     return Container(
       margin: const EdgeInsets.only(left: 8),
       child: FilterChip(
         label: Text(_categories[index]),
         selected: isSelected,
-        onSelected: (value) {},
+        onSelected: (value) {
+            context.read<BookProvider>().fetchBooksByCategory(_categories[index]);
+        },
         selectedColor: AppColors.primaryColor,
         backgroundColor: Colors.grey.shade200,
         labelStyle: TextStyle(
@@ -327,7 +399,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBooksGrid() {
+  Widget _buildBooksGrid(List<BookModel> books) {
+    if (books.isEmpty) {
+        return const Center(child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text('لا توجد كتب متاحة حالياً'),
+        ));
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
@@ -339,21 +417,26 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        itemCount: 6,
+        itemCount: books.length,
         itemBuilder: (context, index) {
-          return _buildBookCard(index);
+          return _buildBookCard(books[index]);
         },
       ),
     );
   }
 
-  Widget _buildBookCard(int index) {
+  Widget _buildBookCard(BookModel book) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to book details
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookDetailsScreen(bookId: book.id),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(12),
         child: Column(
@@ -362,12 +445,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withOpacity(0.1),
+                  color: Colors.grey.shade200,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  image: book.coverImageURL.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(book.coverImageURL),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: const Center(
-                  child: Icon(Icons.menu_book, size: 50, color: AppColors.primaryColor),
-                ),
+                child: book.coverImageURL.isEmpty
+                    ? const Center(
+                        child: Icon(Icons.menu_book, size: 50, color: AppColors.primaryColor),
+                      )
+                    : null,
               ),
             ),
             Padding(
@@ -375,9 +466,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'عنوان الكتاب',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  Text(
+                    book.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -387,15 +478,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        '4.5',
+                        book.rating.toString(),
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '\$12.99',
-                    style: TextStyle(
+                  Text(
+                    '\$${book.price}',
+                    style: const TextStyle(
                       color: AppColors.primaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
