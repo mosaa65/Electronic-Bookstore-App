@@ -4,6 +4,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/book_model.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/favorite_provider.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class BookDetailsScreen extends StatefulWidget {
   final String bookId;
@@ -29,6 +31,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       body: Consumer<BookProvider>(
         builder: (context, bookProvider, _) {
@@ -40,8 +44,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
 
           final book = bookProvider.selectedBook;
           if (book == null) {
-            return const Center(
-              child: Text('الكتاب غير موجود'),
+            return Center(
+              child: Text(l10n.get('bookNotFound')),
             );
           }
 
@@ -71,10 +75,18 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                   ),
                 ),
                 actions: [
-                  IconButton(
-                    icon: const Icon(Icons.favorite_border),
-                    onPressed: () {
-                      // TODO: Add to favorites
+                  Consumer<FavoriteProvider>(
+                    builder: (context, favoriteProvider, _) {
+                      final isFavorite = favoriteProvider.isFavorite(book.id);
+                      return IconButton(
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? Colors.red : null,
+                        ),
+                        onPressed: () {
+                          favoriteProvider.toggleFavorite(book);
+                        },
+                      );
                     },
                   ),
                 ],
@@ -97,7 +109,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                       
                       // Author
                       Text(
-                        'بواسطة ${book.author}',
+                        '${l10n.get('author')}: ${book.author}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.w600,
@@ -120,7 +132,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                           }),
                           const SizedBox(width: 8),
                           Text(
-                            '${book.rating} (${book.ratingsCount} تقييم)',
+                            '${book.rating} (${book.ratingsCount} ${l10n.get('reviews')})',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
@@ -160,7 +172,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                       
                       // Description
                       Text(
-                        'الوصف',
+                        l10n.get('description'),
                         style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           fontSize: 20,
                         ),
@@ -175,18 +187,18 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                       
                       // Details
                       Text(
-                        'التفاصيل',
+                        l10n.get('bookDetails'),
                         style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           fontSize: 20,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildDetailRow('الصفحات', '${book.pages}'),
-                      _buildDetailRow('الفئة', book.category),
-                      _buildDetailRow('اللغة', book.language),
+                      _buildDetailRow(l10n.get('pages'), '${book.pages}'),
+                      _buildDetailRow(l10n.get('category'), book.category),
+                      _buildDetailRow(l10n.get('language'), book.language),
                       if (book.publisher != null)
-                        _buildDetailRow('الناشر', book.publisher!),
-                      _buildDetailRow('المبيعات', '${book.purchaseCount}'),
+                        _buildDetailRow(l10n.get('publisher'), book.publisher!),
+                      _buildDetailRow(l10n.get('bestSellers'), '${book.purchaseCount}'),
                       
                       const SizedBox(height: 100),
                     ],
@@ -227,15 +239,15 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                             : () {
                                 cartProvider.addToCart(book);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('تمت الإضافة إلى السلة'),
+                                  SnackBar(
+                                    content: Text(l10n.get('addedToCart')),
                                     backgroundColor: AppColors.successColor,
-                                    duration: Duration(seconds: 1),
+                                    duration: const Duration(seconds: 1),
                                   ),
                                 );
                               },
                         icon: Icon(isInCart ? Icons.check : Icons.shopping_cart),
-                        label: Text(isInCart ? 'موجود في السلة' : 'إضافة إلى السلة'),
+                        label: Text(isInCart ? l10n.get('cart') : l10n.get('addToCart')),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: isInCart ? Colors.grey : AppColors.primaryColor,

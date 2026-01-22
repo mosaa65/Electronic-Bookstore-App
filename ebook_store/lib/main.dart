@@ -10,6 +10,7 @@ import 'core/localization/app_localizations.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/book_provider.dart';
 import 'presentation/providers/cart_provider.dart';
+import 'presentation/providers/favorite_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/admin/admin_dashboard.dart';
@@ -48,6 +49,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BookProvider()),
         // مزود السلة
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        // مزود المفضلة
+        ChangeNotifierProvider(create: (_) => FavoriteProvider()),
       ],
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, _) {

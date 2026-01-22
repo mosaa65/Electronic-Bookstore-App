@@ -43,6 +43,7 @@ dependencies:
   # UI/UX
   google_fonts: ^6.1.0
   cached_network_image: ^3.3.0
+  # syncfusion_flutter_pdfviewer: ^32.1.24
   flutter_svg: ^2.0.9
   shimmer: ^3.0.0
   flutter_rating_bar: ^4.0.1
@@ -52,7 +53,7 @@ dependencies:
   google_sign_in: ^6.1.6
   
   # PDF Reader
-  syncfusion_flutter_pdfviewer: ^24.1.41
+  
 
   # Image Picker
   image_picker: ^1.0.5

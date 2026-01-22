@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'search_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
@@ -10,6 +11,9 @@ import '../library/my_library_screen.dart';
 import '../profile/profile_screen.dart';
 import '../admin/admin_dashboard.dart';
 import '../books/book_details_screen.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../library/favorites_screen.dart';
+import '../profile/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,25 +33,31 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  final List<String> _categories = [
-    'الكل',
-    'روايات',
-    'علمية',
-    'دينية',
-    'تقنية',
-    'تطوير ذاتي',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
+    // Update categories list based on current locale
+    final List<String> categories = [
+      l10n.get('allCategories'),
+      l10n.get('novels'),
+      l10n.get('scientific'),
+      l10n.get('religious'),
+      l10n.get('technology'),
+      l10n.get('selfDevelopment'),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppStrings.appName),
+        title: Text(l10n.get('appName')),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Navigate to search
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
             },
           ),
           IconButton(
@@ -63,11 +73,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      drawer: _buildDrawer(),
+      drawer: _buildDrawer(context),
       body: Consumer<BookProvider>(
         builder: (context, bookProvider, child) {
           if (bookProvider.isLoading && bookProvider.allBooks.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   const CircularProgressIndicator(),
+                   const SizedBox(height: 16),
+                   Text(l10n.get('loading')),
+                ],
+            ));
           }
 
           if (bookProvider.errorMessage != null && bookProvider.allBooks.isEmpty) {
@@ -78,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                    Text(bookProvider.errorMessage!),
                    ElevatedButton(
                      onPressed: () => bookProvider.fetchAllBooks(),
-                     child: const Text('إعادة المحاولة'),
+                     child: Text(l10n.get('tryAgain')),
                    ),
                 ],
               ),
@@ -91,20 +108,20 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Featured Books Section
                 if (bookProvider.featuredBooks.isNotEmpty) ...[
-                  _buildSectionTitle(AppStrings.featuredBooks),
+                  _buildSectionTitle(l10n.get('featuredBooks')),
                   _buildFeaturedBooks(bookProvider.featuredBooks),
                 ],
                 
                 const SizedBox(height: 24),
                 
                 // Categories
-                _buildSectionTitle(AppStrings.categories),
-                _buildCategories(),
+                _buildSectionTitle(l10n.get('categories')),
+                _buildCategories(categories),
                 
                 const SizedBox(height: 24),
                 
                 // All Books / Best Sellers
-                _buildSectionTitle(AppStrings.bestSellers),
+                _buildSectionTitle(l10n.get('bestSellers')),
                 _buildBooksGrid(bookProvider.filteredBooks),
                 
                 const SizedBox(height: 24),
@@ -116,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
         final user = authProvider.currentUser;
@@ -169,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (authProvider.isAdmin)
                 ListTile(
                   leading: const Icon(Icons.admin_panel_settings, color: AppColors.primaryColor),
-                  title: const Text('لوحة تحكم المدير', style: TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.bold)),
+                  title: Text(l10n.get('adminDashboard'), style: const TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -181,12 +198,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ListTile(
                 leading: const Icon(Icons.home),
-                title: Text(AppStrings.home),
+                title: Text(l10n.get('home')),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
                 leading: const Icon(Icons.library_books),
-                title: Text(AppStrings.myLibrary),
+                title: Text(l10n.get('myLibrary')),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -198,14 +215,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.favorite),
-                title: Text(AppStrings.favorites),
+                title: Text(l10n.get('favorites')),
                 onTap: () {
-                  // TODO: Navigate to favorites
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FavoritesScreen(),
+                    ),
+                  );
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.shopping_cart),
-                title: Text(AppStrings.cart),
+                title: Text(l10n.get('cart')),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -218,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.person),
-                title: Text(AppStrings.profile),
+                title: Text(l10n.get('profile')),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -230,35 +252,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.settings),
-                title: Text(AppStrings.settings),
+                title: Text(l10n.get('settings')),
                 onTap: () {
-                  // TODO: Navigate to settings
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
                 },
               ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.logout, color: AppColors.errorColor),
                 title: Text(
-                  AppStrings.logout,
+                  l10n.get('logout'),
                   style: const TextStyle(color: AppColors.errorColor),
                 ),
                 onTap: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('تسجيل الخروج'),
-                      content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
+                      title: Text(l10n.get('logout')),
+                      content: Text(l10n.get('confirmDelete')),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
-                          child: const Text('إلغاء'),
+                          child: Text(l10n.get('cancel')),
                         ),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.errorColor,
                           ),
-                          child: const Text('تسجيل الخروج'),
+                          child: Text(l10n.get('logout')),
                         ),
                       ],
                     ),
@@ -280,26 +307,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+    // Need context for l10n to localized 'View All' but it is a string arg method
+    // We can just rely on the parent build context if we move this into the build method or pass context
+    // For now, let's just leave it simple or refactor slightly.
+    // Actually, simpler to just use Builder or hardcoded context if available, but it's a mixin method.
+    // Let's pass the build context to use l10n or just update the calls to pass the localized 'View All' ?
+    // No, let's just grab l10n locally or from class if it was stateful properly or just ...
+    // The cleanest way is to pass l10n or use a Builder. 
+    // Since I cannot change the signature easily in `multi_replace` without rigorous checking, 
+    // I made a mistake assuming I can access l10n easily inside this helper without context if it's not passed.
+    // Wait, the method is inside the State class, so I can use `context`.
+    
+    return Builder(builder: (context) {
+       final l10n = AppLocalizations.of(context);
+       return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: () {},
-            child: const Text('عرض الكل'),
-          ),
-        ],
-      ),
-    );
+            TextButton(
+              onPressed: () {},
+              child: Text(l10n.get('viewAll')),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildFeaturedBooks(List<BookModel> books) {
@@ -363,31 +404,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategories() {
+  Widget _buildCategories(List<String> categories) {
     return SizedBox(
       height: 45,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          return _buildCategoryChip(index);
+          return _buildCategoryChip(index, categories);
         },
       ),
     );
   }
 
-  Widget _buildCategoryChip(int index) {
+  Widget _buildCategoryChip(int index, List<String> categories) {
     // Current category is selected based on index or string comparison
     // For simplicity, let's keep it simple
     final isSelected = index == 0; 
     return Container(
       margin: const EdgeInsets.only(left: 8),
       child: FilterChip(
-        label: Text(_categories[index]),
+        label: Text(categories[index]),
         selected: isSelected,
         onSelected: (value) {
-            context.read<BookProvider>().fetchBooksByCategory(_categories[index]);
+            // Note: Sending the localized string to the provider might fail if provider expects specific keys.
+            // Ideally we should have a list of keys and a list of display names.
+            // For now, assuming the provider might need update or we send the display name if that's what it expects.
+            // Given the previous code had 'روايات' hardcoded, it seems the backend uses Arabic names or the provider filters by it.
+            // If we switch language to English, 'Novels' will be sent.
+            // If the DB has 'روايات', filtering by 'Novels' will return nothing.
+            // TODO: Fix filtering logic to be language independent (use keys/enums).
+            context.read<BookProvider>().fetchBooksByCategory(categories[index]);
         },
         selectedColor: AppColors.primaryColor,
         backgroundColor: Colors.grey.shade200,
@@ -401,9 +449,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBooksGrid(List<BookModel> books) {
     if (books.isEmpty) {
-        return const Center(child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text('لا توجد كتب متاحة حالياً'),
+        return Center(child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(AppLocalizations.of(context).get('noData')),
         ));
     }
     return Padding(

@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/repositories/book_repository.dart';
+import 'settings_screen.dart';
+import '../library/favorites_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الملف الشخصي'),
+        title: Text(l10n.get('profile')),
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           if (!authProvider.isAuthenticated) {
-            return const Center(
-              child: Text('الرجاء تسجيل الدخول'),
+            return Center(
+              child: Text(l10n.get('loginToSeeLibrary')),
             );
           }
 
@@ -79,7 +84,7 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    user.isAdmin ? 'مدير' : 'مستخدم',
+                    user.isAdmin ? l10n.get('adminPanel') : l10n.get('profile'),
                     style: TextStyle(
                       color: user.isAdmin
                           ? AppColors.secondaryColor
@@ -91,39 +96,21 @@ class ProfileScreen extends StatelessWidget {
                 
                 const SizedBox(height: 32),
                 
-                // Bio (if exists)
-                if (user.bio != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      user.bio!,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                
                 // Stats
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildStatCard(
                       context,
-                      'الكتب المشتراة',
+                      l10n.get('purchased'),
                       '${user.totalPurchases ?? 0}',
                       Icons.book,
                     ),
                     _buildStatCard(
                       context,
-                      'التقييمات',
-                      '0',
-                      Icons.star,
+                      l10n.get('favorites'),
+                      '0', // We'll update this with real count later if needed
+                      Icons.favorite,
                     ),
                   ],
                 ),
@@ -131,57 +118,55 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 32),
                 
                 // Action Buttons
-                ListTile(
-                  leading: const Icon(Icons.edit, color: AppColors.primaryColor),
-                  title: const Text('تعديل الملف الشخصي'),
-                  trailing: const Icon(Icons.chevron_right),
+                _buildActionTile(
+                  context,
+                  icon: Icons.favorite,
+                  title: l10n.get('favorites'),
                   onTap: () {
-                    // TODO: Navigate to edit profile
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const FavoritesScreen()),
+                    );
                   },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: Colors.grey[100],
                 ),
                 
                 const SizedBox(height: 12),
                 
-                ListTile(
-                  leading: const Icon(Icons.settings, color: AppColors.primaryColor),
-                  title: const Text('الإعدادات'),
-                  trailing: const Icon(Icons.chevron_right),
+                _buildActionTile(
+                  context,
+                  icon: Icons.settings,
+                  title: l10n.get('settings'),
                   onTap: () {
-                    // TODO: Navigate to settings
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    );
                   },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: Colors.grey[100],
                 ),
                 
                 const SizedBox(height: 12),
                 
                 ListTile(
                   leading: const Icon(Icons.logout, color: AppColors.errorColor),
-                  title: const Text('تسجيل الخروج'),
+                  title: Text(l10n.get('logout')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('تسجيل الخروج'),
-                        content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
+                        title: Text(l10n.get('logout')),
+                        content: Text(l10n.get('confirmDelete')), // Reusing generic confirm
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('إلغاء'),
+                            child: Text(l10n.get('cancel')),
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(context, true),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.errorColor,
                             ),
-                            child: const Text('تسجيل الخروج'),
+                            child: Text(l10n.get('logout')),
                           ),
                         ],
                       ),
@@ -197,35 +182,35 @@ class ProfileScreen extends StatelessWidget {
                   tileColor: AppColors.errorColor.withOpacity(0.1),
                 ),
                 
-                const SizedBox(height: 24),
-                
-                // Admin Area (Temporary for Seeding)
-                if (true) ...[
+                if (user.isAdmin) ...[
+                  const SizedBox(height: 24),
                   const Divider(),
                   Padding(
-                     padding: const EdgeInsets.all(8.0),
-                     child: Text('منطقة الإدارة', style: Theme.of(context).textTheme.titleMedium),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      l10n.get('adminDashboard'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.cloud_upload, color: Colors.blue),
-                    title: const Text('إضافة بيانات تجريبية (Seed Data)'),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.cloud_upload,
+                    title: l10n.get('seedData'),
+                    tileColor: Colors.blue.withOpacity(0.1),
+                    iconColor: Colors.blue,
                     onTap: () async {
                        try {
                          final bookRepository = BookRepository();
                          await bookRepository.seedBooks();
                          ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('تمت إضافة البيانات بنجاح')),
+                           SnackBar(content: Text(l10n.get('dataSeeded'))),
                          );
                        } catch (e) {
                          ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text('خطأ: $e')),
+                           SnackBar(content: Text('${l10n.get('error')}: $e')),
                          );
                        }
                     },
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    tileColor: Colors.blue.withOpacity(0.1),
                   ),
                 ],
               ],
@@ -233,6 +218,26 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildActionTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? tileColor,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: iconColor ?? AppColors.primaryColor),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      tileColor: tileColor ?? Colors.grey[100],
     );
   }
 
@@ -244,6 +249,7 @@ class ProfileScreen extends StatelessWidget {
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(minWidth: 120),
       decoration: BoxDecoration(
         color: AppColors.primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
