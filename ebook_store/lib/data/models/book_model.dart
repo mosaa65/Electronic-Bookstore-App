@@ -97,6 +97,13 @@ class BookModel {
     };
   }
 
+  // Aliases for compatibility
+  Map<String, dynamic> toMap() => toJson();
+
+  factory BookModel.fromMap(Map<String, dynamic> map, String id) {
+    return BookModel.fromJson(map, id);
+  }
+
   BookModel copyWith({
     String? id,
     String? title,

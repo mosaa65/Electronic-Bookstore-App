@@ -36,7 +36,7 @@ class FavoriteRepository {
     return _favoritesRef.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         return BookModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList();
+      }).toList().cast<BookModel>();
     });
   }
 }
