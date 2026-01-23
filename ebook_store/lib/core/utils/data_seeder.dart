@@ -1,20 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../data/repositories/book_repository.dart';
 
 class DataSeeder {
   static Future<void> seedAll() async {
     final bookRepo = BookRepository();
-    
-    print('Starting seeding process...');
-    
+
+    debugPrint('Starting seeding process...');
+
     try {
       // Seed Books using existing method in repository
       await bookRepo.seedBooks();
-      
+
       // We can add category seeding here if needed
-      print('Seeding completed!');
+      debugPrint('Seeding completed!');
     } catch (e) {
-      print('Seeding failed: $e');
+      debugPrint('Seeding failed: $e');
     }
   }
 }

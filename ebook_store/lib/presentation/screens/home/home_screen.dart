@@ -23,6 +23,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // الفئة المختارة حالياً
+  int _selectedCategoryIndex = 0;
+
+  // قائمة الفئات بالعربي للـ DB
+  static const List<String> _categoryDBKeys = [
+    'الكل',
+    'روايات',
+    'علمية',
+    'دينية',
+    'تقنية',
+    'تطوير ذاتي',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -36,8 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
-    // Update categories list based on current locale
+
+    // قائمة الفئات المترجمة للعرض
     final List<String> categories = [
       l10n.get('allCategories'),
       l10n.get('novels'),
@@ -65,9 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const CartScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const CartScreen()),
               );
             },
           ),
@@ -77,26 +88,29 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Consumer<BookProvider>(
         builder: (context, bookProvider, child) {
           if (bookProvider.isLoading && bookProvider.allBooks.isEmpty) {
-            return Center(child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                   const CircularProgressIndicator(),
-                   const SizedBox(height: 16),
-                   Text(l10n.get('loading')),
-                ],
-            ));
-          }
-
-          if (bookProvider.errorMessage != null && bookProvider.allBooks.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Text(bookProvider.errorMessage!),
-                   ElevatedButton(
-                     onPressed: () => bookProvider.fetchAllBooks(),
-                     child: Text(l10n.get('tryAgain')),
-                   ),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(l10n.get('loading')),
+                ],
+              ),
+            );
+          }
+
+          if (bookProvider.errorMessage != null &&
+              bookProvider.allBooks.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(bookProvider.errorMessage!),
+                  ElevatedButton(
+                    onPressed: () => bookProvider.fetchAllBooks(),
+                    child: Text(l10n.get('tryAgain')),
+                  ),
                 ],
               ),
             );
@@ -111,19 +125,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildSectionTitle(l10n.get('featuredBooks')),
                   _buildFeaturedBooks(bookProvider.featuredBooks),
                 ],
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Categories
                 _buildSectionTitle(l10n.get('categories')),
                 _buildCategories(categories),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // All Books / Best Sellers
                 _buildSectionTitle(l10n.get('bestSellers')),
                 _buildBooksGrid(bookProvider.filteredBooks),
-                
+
                 const SizedBox(height: 24),
               ],
             ),
@@ -138,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
         final user = authProvider.currentUser;
-        
+
         return Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -186,8 +200,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               if (authProvider.isAdmin)
                 ListTile(
-                  leading: const Icon(Icons.admin_panel_settings, color: AppColors.primaryColor),
-                  title: Text(l10n.get('adminDashboard'), style: const TextStyle(color: AppColors.primaryColor, fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    Icons.admin_panel_settings,
+                    color: AppColors.primaryColor,
+                  ),
+                  title: Text(
+                    l10n.get('adminDashboard'),
+                    style: const TextStyle(
+                      color: AppColors.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -232,9 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const CartScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
                   );
                 },
               ),
@@ -314,34 +335,33 @@ class _HomeScreenState extends State<HomeScreen> {
     // Actually, simpler to just use Builder or hardcoded context if available, but it's a mixin method.
     // Let's pass the build context to use l10n or just update the calls to pass the localized 'View All' ?
     // No, let's just grab l10n locally or from class if it was stateful properly or just ...
-    // The cleanest way is to pass l10n or use a Builder. 
-    // Since I cannot change the signature easily in `multi_replace` without rigorous checking, 
+    // The cleanest way is to pass l10n or use a Builder.
+    // Since I cannot change the signature easily in `multi_replace` without rigorous checking,
     // I made a mistake assuming I can access l10n easily inside this helper without context if it's not passed.
     // Wait, the method is inside the State class, so I can use `context`.
-    
-    return Builder(builder: (context) {
-       final l10n = AppLocalizations.of(context);
-       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(l10n.get('viewAll')),
-            ),
-          ],
-        ),
-      );
-    });
+              TextButton(onPressed: () {}, child: Text(l10n.get('viewAll'))),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildFeaturedBooks(List<BookModel> books) {
@@ -388,7 +408,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: book.coverImageURL.isEmpty
                   ? const Center(
-                      child: Icon(Icons.book, size: 60, color: AppColors.primaryColor),
+                      child: Icon(
+                        Icons.book,
+                        size: 60,
+                        color: AppColors.primaryColor,
+                      ),
                     )
                   : null,
             ),
@@ -420,23 +444,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryChip(int index, List<String> categories) {
-    // Current category is selected based on index or string comparison
-    // For simplicity, let's keep it simple
-    final isSelected = index == 0; 
+    final isSelected = index == _selectedCategoryIndex;
     return Container(
       margin: const EdgeInsets.only(left: 8),
       child: FilterChip(
         label: Text(categories[index]),
         selected: isSelected,
         onSelected: (value) {
-            // Note: Sending the localized string to the provider might fail if provider expects specific keys.
-            // Ideally we should have a list of keys and a list of display names.
-            // For now, assuming the provider might need update or we send the display name if that's what it expects.
-            // Given the previous code had 'روايات' hardcoded, it seems the backend uses Arabic names or the provider filters by it.
-            // If we switch language to English, 'Novels' will be sent.
-            // If the DB has 'روايات', filtering by 'Novels' will return nothing.
-            // TODO: Fix filtering logic to be language independent (use keys/enums).
-            context.read<BookProvider>().fetchBooksByCategory(categories[index]);
+          if (value) {
+            setState(() {
+              _selectedCategoryIndex = index;
+            });
+            // إرسال اسم الفئة بالعربي للـ DB
+            context.read<BookProvider>().fetchBooksByCategory(
+              _categoryDBKeys[index],
+            );
+          } else if (_selectedCategoryIndex == index && index != 0) {
+            // العودة لـ "الكل" عند إلغاء التحديد
+            setState(() {
+              _selectedCategoryIndex = 0;
+            });
+            context.read<BookProvider>().fetchBooksByCategory(
+              _categoryDBKeys[0],
+            );
+          }
         },
         selectedColor: AppColors.primaryColor,
         backgroundColor: Colors.grey.shade200,
@@ -450,10 +481,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBooksGrid(List<BookModel> books) {
     if (books.isEmpty) {
-        return Center(child: Padding(
+      return Center(
+        child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Text(AppLocalizations.of(context).get('noData')),
-        ));
+        ),
+      );
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -495,7 +528,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
                   image: book.coverImageURL.isNotEmpty
                       ? DecorationImage(
                           image: NetworkImage(book.coverImageURL),
@@ -505,7 +540,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: book.coverImageURL.isEmpty
                     ? const Center(
-                        child: Icon(Icons.menu_book, size: 50, color: AppColors.primaryColor),
+                        child: Icon(
+                          Icons.menu_book,
+                          size: 50,
+                          color: AppColors.primaryColor,
+                        ),
                       )
                     : null,
               ),
@@ -517,7 +556,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     book.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -528,7 +570,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 4),
                       Text(
                         book.rating.toString(),
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),

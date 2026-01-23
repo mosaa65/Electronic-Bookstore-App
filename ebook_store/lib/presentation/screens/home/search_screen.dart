@@ -14,7 +14,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -24,123 +24,232 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: l10n.get('searchBooks'),
-            border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.grey[400]),
-          ),
-          style: const TextStyle(color: Colors.black),
-          onChanged: (value) {
-            Provider.of<BookProvider>(context, listen: false).searchBooks(value);
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              _searchController.clear();
-              Provider.of<BookProvider>(context, listen: false).searchBooks('');
-            },
-          ),
-        ],
-      ),
-      body: Consumer<BookProvider>(
-        builder: (context, bookProvider, _) {
-          if (bookProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
 
-          final books = bookProvider.filteredBooks;
-          
-          if (books.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _searchController.text.isEmpty 
-                        ? l10n.get('searchBooks') 
-                        : l10n.get('noData'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
+    // استخدام PopScope للتأكد من مسح الفلترة عند الخروج
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          // إعادة تعيين الفلترة عند الخروج
+          Future.microtask(() {
+            if (context.mounted) {
+              Provider.of<BookProvider>(context, listen: false).clearFilters();
+            }
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Search Header
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(8),
-                  leading: Container(
-                    width: 60,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: book.coverImageURL.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(book.coverImageURL),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      color: Colors.grey[200],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
-                    child: book.coverImageURL.isEmpty
-                        ? const Icon(Icons.book, color: AppColors.primaryColor)
-                        : null,
-                  ),
-                  title: Text(
-                    book.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(book.author),
-                      Text(
-                        '\$${book.price}',
-                        style: const TextStyle(
-                          color: AppColors.primaryColor,
-                          fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            hintText: l10n.get('searchBooks'),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 20),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      Provider.of<BookProvider>(
+                                        context,
+                                        listen: false,
+                                      ).searchBooks('');
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {}); // لتحديث أيقونة المسح
+                            Provider.of<BookProvider>(
+                              context,
+                              listen: false,
+                            ).searchBooks(value);
+                          },
                         ),
                       ),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BookDetailsScreen(bookId: book.id),
-                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Results
+              Expanded(
+                child: Consumer<BookProvider>(
+                  builder: (context, bookProvider, _) {
+                    if (bookProvider.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final books = bookProvider.filteredBooks;
+
+                    if (books.isEmpty && _searchController.text.isNotEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 100,
+                              color: Colors.grey[200],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n.get('noData'),
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: books.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 30),
+                      itemBuilder: (context, index) {
+                        final book = books[index];
+                        return InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    BookDetailsScreen(bookId: book.id),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Image
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  book.coverImageURL,
+                                  width: 80,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 80,
+                                      height: 120,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.book,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              // Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      book.title,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      book.author,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.star,
+                                          size: 16,
+                                          color: Colors.amber[700],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${book.rating}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '\$${book.price}',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
-              );
-            },
-          );
-        },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

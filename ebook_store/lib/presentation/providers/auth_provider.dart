@@ -32,31 +32,33 @@ class AuthProvider with ChangeNotifier {
 
   // Initialize user from Firebase
   Future<void> _initializeUser() async {
-    print('DEBUG: _initializeUser called');
+    debugPrint('DEBUG: _initializeUser called');
     final user = _authRepository.currentUser;
-    print('DEBUG: Current Firebase User: ${user?.uid}');
+    debugPrint('DEBUG: Current Firebase User: ${user?.uid}');
 
     if (user != null) {
       try {
-        print('DEBUG: Fetching user data from Firestore...');
+        debugPrint('DEBUG: Fetching user data from Firestore...');
         _currentUser = await _authRepository.getUserData(user.uid);
-        print('DEBUG: Firestore Data: ${_currentUser != null ? "Found" : "Not Found"}');
+        debugPrint(
+          'DEBUG: Firestore Data: ${_currentUser != null ? "Found" : "Not Found"}',
+        );
 
         if (_currentUser == null) {
-            // Fallback if Firestore fails: create partial user from Auth
-            print('DEBUG: Firestore user data missing, using Auth data');
-            _currentUser = UserModel(
-               uid: user.uid,
-               email: user.email ?? '',
-               displayName: user.displayName ?? 'مستخدم',
-               role: 'user',
-               createdAt: DateTime.now(),
-               updatedAt: DateTime.now(),
-               photoURL: user.photoURL,
-            );
+          // Fallback if Firestore fails: create partial user from Auth
+          debugPrint('DEBUG: Firestore user data missing, using Auth data');
+          _currentUser = UserModel(
+            uid: user.uid,
+            email: user.email ?? '',
+            displayName: user.displayName ?? 'مستخدم',
+            role: 'user',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            photoURL: user.photoURL,
+          );
         }
       } catch (e) {
-         print('DEBUG: Error in _initializeUser: $e');
+        debugPrint('DEBUG: Error in _initializeUser: $e');
       }
       notifyListeners();
     }
@@ -66,25 +68,25 @@ class AuthProvider with ChangeNotifier {
   Future<bool> signInWithEmail(String email, String password) async {
     _setLoading(true);
     _errorMessage = null;
-    print('DEBUG: Attempting login for $email');
+    debugPrint('DEBUG: Attempting login for $email');
 
     try {
       final user = await _authRepository.signInWithEmail(email, password);
-      print('DEBUG: Auth successful for ${user?.uid}');
-      
+      debugPrint('DEBUG: Auth successful for ${user?.uid}');
+
       if (user != null) {
         await _initializeUser();
         _setLoading(false);
         return true;
       } else {
         _errorMessage = 'فشل تسجيل الدخول: مستخدم غير موجود';
-        print('DEBUG: Login failed: User is null');
+        debugPrint('DEBUG: Login failed: User is null');
         _setLoading(false);
         return false;
       }
     } catch (e) {
       _errorMessage = e.toString();
-      print('DEBUG: Login exception: $e');
+      debugPrint('DEBUG: Login exception: $e');
       _setLoading(false);
       return false;
     }
@@ -99,7 +101,7 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
-    print('DEBUG: Attempting register for $email');
+    debugPrint('DEBUG: Attempting register for $email');
 
     try {
       final user = await _authRepository.registerWithEmail(
@@ -108,8 +110,8 @@ class AuthProvider with ChangeNotifier {
         displayName: displayName,
         role: role,
       );
-      
-      print('DEBUG: Auth return handled: ${user?.uid}');
+
+      debugPrint('DEBUG: Auth return handled: ${user?.uid}');
 
       if (user != null) {
         _currentUser = user;
@@ -123,7 +125,7 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       _errorMessage = e.toString();
-      print('DEBUG: Register exception: $e');
+      debugPrint('DEBUG: Register exception: $e');
       _setLoading(false);
       return false;
     }
@@ -204,10 +206,10 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = 'غير مصرح لك بإنشاء مدراء';
       return false;
     }
-    
+
     _setLoading(true);
     _errorMessage = null;
-    
+
     try {
       final newAdmin = await _authRepository.createAdminByAdmin(
         email: email,
@@ -215,7 +217,7 @@ class AuthProvider with ChangeNotifier {
         displayName: displayName,
         createdBy: _currentUser!.uid,
       );
-      
+
       _setLoading(false);
       return newAdmin != null;
     } catch (e) {

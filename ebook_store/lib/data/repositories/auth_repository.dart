@@ -18,15 +18,17 @@ class AuthRepository {
   // Sign in with email and password
   Future<UserModel?> signInWithEmail(String email, String password) async {
     try {
-      print('DEBUG REPO: Calling signInWithEmailAndPassword...');
+      debugPrint('DEBUG REPO: Calling signInWithEmailAndPassword...');
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      print('DEBUG REPO: signInWithEmailAndPassword returned. User: ${credential.user?.uid}');
+      debugPrint(
+        'DEBUG REPO: signInWithEmailAndPassword returned. User: ${credential.user?.uid}',
+      );
 
       if (credential.user != null) {
-        print('DEBUG REPO: Fetching user data via getUserData...');
+        debugPrint('DEBUG REPO: Fetching user data via getUserData...');
         return await getUserData(credential.user!.uid);
       }
       return null;
@@ -44,25 +46,27 @@ class AuthRepository {
   }) async {
     User? firebaseUser;
     try {
-      print('DEBUG REPO: Calling createUserWithEmailAndPassword...');
+      debugPrint('DEBUG REPO: Calling createUserWithEmailAndPassword...');
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       firebaseUser = credential.user;
-      print('DEBUG REPO: Auth success for ${firebaseUser?.uid}');
+      debugPrint('DEBUG REPO: Auth success for ${firebaseUser?.uid}');
     } catch (e) {
-      print('DEBUG REPO: Auth error caught: $e');
+      debugPrint('DEBUG REPO: Auth error caught: $e');
       // Handle the Pigeon cast error that user is experiencing
       if (e.toString().contains('PigeonUserDetails')) {
-        print('DEBUG REPO: Pigeon cast error detected, verifying user creation...');
+        debugPrint(
+          'DEBUG REPO: Pigeon cast error detected, verifying user creation...',
+        );
         firebaseUser = _auth.currentUser;
       }
-      
+
       if (firebaseUser == null) {
         throw Exception('خطأ في التسجيل: ${e.toString()}');
       }
-      print('DEBUG REPO: User exists after error, proceeding...');
+      debugPrint('DEBUG REPO: User exists after error, proceeding...');
     }
 
     if (firebaseUser != null) {
@@ -70,7 +74,7 @@ class AuthRepository {
         // Update display name
         await firebaseUser.updateDisplayName(displayName);
       } catch (e) {
-        print('DEBUG REPO: Ignored error updating display name: $e');
+        debugPrint('DEBUG REPO: Ignored error updating display name: $e');
       }
 
       // Create user document in Firestore
@@ -84,14 +88,16 @@ class AuthRepository {
       );
 
       try {
-        print('DEBUG REPO: Creating Firestore user document for ${firebaseUser.uid}...');
+        debugPrint(
+          'DEBUG REPO: Creating Firestore user document for ${firebaseUser.uid}...',
+        );
         await _firestore
             .collection('users')
             .doc(firebaseUser.uid)
             .set(userModel.toJson());
-        print('DEBUG REPO: Firestore document created successfully.');
+        debugPrint('DEBUG REPO: Firestore document created successfully.');
       } catch (e) {
-        print('DEBUG REPO: Firestore document creation failed: $e');
+        debugPrint('DEBUG REPO: Firestore document creation failed: $e');
         // We still return the userModel so the app can function
       }
 
@@ -155,10 +161,7 @@ class AuthRepository {
   // Sign out
   Future<void> signOut() async {
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
     } catch (e) {
       throw Exception('خطأ في تسجيل الخروج: ${e.toString()}');
     }
@@ -166,15 +169,15 @@ class AuthRepository {
 
   Future<UserModel?> getUserData(String uid) async {
     try {
-      print('DEBUG REPO: getUserData called for $uid');
+      debugPrint('DEBUG REPO: getUserData called for $uid');
       final doc = await _firestore.collection('users').doc(uid).get();
-      print('DEBUG REPO: Firestore doc retrieved. Exists: ${doc.exists}');
+      debugPrint('DEBUG REPO: Firestore doc retrieved. Exists: ${doc.exists}');
       if (doc.exists) {
         return UserModel.fromJson(doc.data()!);
       }
       return null;
     } catch (e) {
-      print('DEBUG: Error getting user data: $e');
+      debugPrint('DEBUG: Error getting user data: $e');
       // Return null instead of throwing to allow debugging
       return null;
       // throw Exception('خطأ في جلب بيانات المستخدم: ${e.toString()}');
@@ -184,10 +187,7 @@ class AuthRepository {
   // Create user document
   Future<void> createUser(UserModel user) async {
     try {
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(user.toJson());
+      await _firestore.collection('users').doc(user.uid).set(user.toJson());
     } catch (e) {
       throw Exception('خطأ في إنشاء ملف المستخدم: ${e.toString()}');
     }
@@ -225,13 +225,13 @@ class AuthRepository {
     try {
       // حفظ المستخدم الحالي
       final currentUser = _auth.currentUser;
-      
+
       // إنشاء حساب جديد
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       if (credential.user != null) {
         // تحديث اسم العرض
         try {
@@ -239,7 +239,7 @@ class AuthRepository {
         } catch (e) {
           debugPrint('Error updating display name: $e');
         }
-        
+
         // إنشاء وثيقة المستخدم في Firestore
         final userModel = UserModel(
           uid: credential.user!.uid,
@@ -249,22 +249,19 @@ class AuthRepository {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
-        
-        await _firestore
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set({
-              ...userModel.toJson(),
-              'createdBy': createdBy, // من أنشأ هذا المدير
-            });
-        
+
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          ...userModel.toJson(),
+          'createdBy': createdBy, // من أنشأ هذا المدير
+        });
+
         // تسجيل خروج المدير الجديد والعودة للمدير الأصلي
         await _auth.signOut();
-        
+
         // إعادة تسجيل دخول المدير الأصلي
         // ملاحظة: هذا يتطلب أن يكون لدينا credentials المدير الأصلي
         // لذلك سنعتمد على أن المستخدم سيبقى مسجل دخول
-        
+
         return userModel;
       }
       return null;
@@ -281,7 +278,7 @@ class AuthRepository {
           .collection('users')
           .where('role', isEqualTo: 'admin')
           .get();
-      
+
       return snapshot.docs
           .map((doc) => UserModel.fromJson(doc.data()))
           .toList();
@@ -295,9 +292,11 @@ class AuthRepository {
   Future<Map<String, int>> getUserStats() async {
     try {
       final usersSnapshot = await _firestore.collection('users').get();
-      final admins = usersSnapshot.docs.where((doc) => doc.data()['role'] == 'admin').length;
+      final admins = usersSnapshot.docs
+          .where((doc) => doc.data()['role'] == 'admin')
+          .length;
       final users = usersSnapshot.docs.length - admins;
-      
+
       return {
         'total': usersSnapshot.docs.length,
         'admins': admins,
@@ -308,4 +307,3 @@ class AuthRepository {
     }
   }
 }
-

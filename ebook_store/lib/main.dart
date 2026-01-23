@@ -11,6 +11,7 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/book_provider.dart';
 import 'presentation/providers/cart_provider.dart';
 import 'presentation/providers/favorite_provider.dart';
+import 'presentation/providers/purchase_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/admin/admin_dashboard.dart';
@@ -19,9 +20,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -51,24 +50,26 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         // مزود المفضلة
         ChangeNotifierProvider(create: (_) => FavoriteProvider()),
+        // مزود المشتريات
+        ChangeNotifierProvider(create: (_) => PurchaseProvider()),
       ],
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, _) {
           return MaterialApp(
             // اسم التطبيق
             title: localeProvider.isArabic ? 'متجر الكتب' : 'eBook Store',
-            
+
             // إخفاء شريط Debug
             debugShowCheckedModeBanner: false,
-            
+
             // ========== إعدادات اللغة والاتجاه ==========
-            
+
             // اللغة الحالية
             locale: localeProvider.locale,
-            
+
             // اللغات المدعومة
             supportedLocales: LocaleProvider.supportedLocales,
-            
+
             // مندوب الترجمة المخصص
             localizationsDelegates: [
               AppLocalizationsDelegate(),
@@ -76,20 +77,19 @@ class MyApp extends StatelessWidget {
               _MaterialLocalizationsDelegate(localeProvider.isArabic),
               _WidgetsLocalizationsDelegate(localeProvider.isArabic),
             ],
-            
+
             // ========== الثيم ==========
-            
+
             // الثيم الفاتح
             theme: AppTheme.lightTheme(isArabic: localeProvider.isArabic),
-            
+
             // الثيم الداكن (للمستقبل)
             darkTheme: AppTheme.darkTheme(isArabic: localeProvider.isArabic),
-            
+
             // وضع الثيم
             themeMode: ThemeMode.light,
-            
+
             // ========== Builder للاتجاه ==========
-            
             builder: (context, child) {
               return Directionality(
                 // اتجاه النص حسب اللغة
@@ -97,9 +97,8 @@ class MyApp extends StatelessWidget {
                 child: child!,
               );
             },
-            
+
             // ========== الشاشة الرئيسية ==========
-            
             home: Consumer<AuthProvider>(
               builder: (context, authProvider, _) {
                 // إذا كان المستخدم مسجّل دخول
@@ -124,34 +123,38 @@ class MyApp extends StatelessWidget {
 
 // ========== Minimal Material Localizations ==========
 
-class _MaterialLocalizationsDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+class _MaterialLocalizationsDelegate
+    extends LocalizationsDelegate<MaterialLocalizations> {
   final bool isArabic;
   _MaterialLocalizationsDelegate(this.isArabic);
-  
+
   @override
   bool isSupported(Locale locale) => true;
-  
+
   @override
   Future<MaterialLocalizations> load(Locale locale) async {
     return DefaultMaterialLocalizations();
   }
-  
+
   @override
-  bool shouldReload(_MaterialLocalizationsDelegate old) => old.isArabic != isArabic;
+  bool shouldReload(_MaterialLocalizationsDelegate old) =>
+      old.isArabic != isArabic;
 }
 
-class _WidgetsLocalizationsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
+class _WidgetsLocalizationsDelegate
+    extends LocalizationsDelegate<WidgetsLocalizations> {
   final bool isArabic;
   _WidgetsLocalizationsDelegate(this.isArabic);
-  
+
   @override
   bool isSupported(Locale locale) => true;
-  
+
   @override
   Future<WidgetsLocalizations> load(Locale locale) async {
     return DefaultWidgetsLocalizations();
   }
-  
+
   @override
-  bool shouldReload(_WidgetsLocalizationsDelegate old) => old.isArabic != isArabic;
+  bool shouldReload(_WidgetsLocalizationsDelegate old) =>
+      old.isArabic != isArabic;
 }

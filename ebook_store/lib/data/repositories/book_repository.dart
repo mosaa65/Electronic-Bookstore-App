@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/book_model.dart';
 
 class BookRepository {
@@ -138,16 +139,19 @@ class BookRepository {
         .collection('books')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BookModel.fromJson(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => BookModel.fromJson(doc.data(), doc.id))
+              .toList(),
+        );
   }
+
   // Seed sample books
   Future<void> seedBooks() async {
     try {
       final snapshot = await _firestore.collection('books').limit(1).get();
       if (snapshot.docs.isNotEmpty) {
-        print('Database already seeded');
+        debugPrint('Database already seeded');
         return;
       }
 
@@ -156,9 +160,11 @@ class BookRepository {
           id: '',
           title: 'مقدمة ابن خلدون',
           author: 'ابن خلدون',
-          description: 'كتاب العبر وديوان المبتدأ والخبر في معرفة أيام العرب والعجم والبربر ومن عاصرهم من ذوي السلطان الأكبر.',
+          description:
+              'كتاب العبر وديوان المبتدأ والخبر في معرفة أيام العرب والعجم والبربر ومن عاصرهم من ذوي السلطان الأكبر.',
           price: 15.0,
-          coverImageURL: 'https://books.google.com/books/content?id=bH1lAAAAMAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE71y8293y89123891283',
+          coverImageURL:
+              'https://books.google.com/books/content?id=bH1lAAAAMAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE71y8293y89123891283',
           category: 'تاريخ',
           language: 'عربي',
           pages: 500,
@@ -173,9 +179,11 @@ class BookRepository {
           id: '',
           title: 'فن الحرب',
           author: 'سون تزو',
-          description: 'أطروحة عسكرية صينية قديمة تُنسب إلى سون تزو، وهو استراتيجي عسكري صيني رفيع المستوى.',
+          description:
+              'أطروحة عسكرية صينية قديمة تُنسب إلى سون تزو، وهو استراتيجي عسكري صيني رفيع المستوى.',
           price: 10.0,
-          coverImageURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/BambergApocalypse0340.JPG/250px-BambergApocalypse0340.JPG',
+          coverImageURL:
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/BambergApocalypse0340.JPG/250px-BambergApocalypse0340.JPG',
           category: 'استراتيجية',
           language: 'عربي',
           pages: 120,
@@ -190,9 +198,11 @@ class BookRepository {
           id: '',
           title: 'الأب الغني والأب الفقير',
           author: 'روبرت كيوساكي',
-          description: 'كتاب يدافع عن أهمية الاستقلال المالي وبناء الثروة عن طريق الاستثمار.',
+          description:
+              'كتاب يدافع عن أهمية الاستقلال المالي وبناء الثروة عن طريق الاستثمار.',
           price: 20.0,
-          coverImageURL: 'https://upload.wikimedia.org/wikipedia/en/b/b9/Rich_Dad_Poor_Dad.jpg',
+          coverImageURL:
+              'https://upload.wikimedia.org/wikipedia/en/b/b9/Rich_Dad_Poor_Dad.jpg',
           category: 'تطوير ذاتي',
           language: 'عربي',
           pages: 336,
@@ -208,9 +218,9 @@ class BookRepository {
       for (var book in sampleBooks) {
         await addBook(book);
       }
-      print('Seeding completed successfully');
+      debugPrint('Seeding completed successfully');
     } catch (e) {
-      print('Error seeding books: $e');
+      debugPrint('Error seeding books: $e');
       throw Exception('خطأ في إضافة البيانات التجريبية: $e');
     }
   }

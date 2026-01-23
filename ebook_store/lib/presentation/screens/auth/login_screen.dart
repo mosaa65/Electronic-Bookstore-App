@@ -33,18 +33,20 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final loc = AppLocalizations.of(context);
-      
+
       final success = await authProvider.signInWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
       if (!mounted) return;
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!'),
+            content: Text(
+              '${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!',
+            ),
             backgroundColor: AppColors.successColor,
           ),
         );
@@ -62,15 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final loc = AppLocalizations.of(context);
-    
+
     final success = await authProvider.signInWithGoogle();
-    
+
     if (!mounted) return;
-    
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!'),
+          content: Text(
+            '${loc.tr('welcome')} ${authProvider.currentUser?.displayName ?? ""}!',
+          ),
           backgroundColor: AppColors.successColor,
         ),
       );
@@ -88,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final localeProvider = context.watch<LocaleProvider>();
-    
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -100,8 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // زر تبديل اللغة
                 Align(
-                  alignment: localeProvider.isArabic 
-                      ? Alignment.centerLeft 
+                  alignment: localeProvider.isArabic
+                      ? Alignment.centerLeft
                       : Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: () => localeProvider.toggleLocale(),
@@ -112,9 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // App Logo
                 Container(
                   height: 100,
@@ -123,34 +127,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: AppColors.primaryColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
-                    size: 60,
-                    color: AppColors.primaryColor,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/book_icon.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // App Name
                 Text(
                   loc.tr('appName'),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayMedium,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
-                  loc.isArabic 
+                  loc.isArabic
                       ? 'مرحباً بك في متجر الكتب الإلكترونية'
                       : 'Welcome to the eBook Store',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // Email Field
                 CustomTextField(
                   label: loc.tr('email'),
@@ -160,9 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: Validators.validateEmail,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 CustomTextField(
                   label: loc.tr('password'),
@@ -173,7 +181,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: Validators.validatePassword,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: AppColors.textSecondary,
                     ),
                     onPressed: () {
@@ -181,13 +191,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Forgot Password
                 Align(
-                  alignment: localeProvider.isArabic 
-                      ? Alignment.centerRight 
+                  alignment: localeProvider.isArabic
+                      ? Alignment.centerRight
                       : Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () {
@@ -202,9 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Login Button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, _) {
@@ -215,9 +225,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // OR Divider
                 Row(
                   children: [
@@ -232,9 +242,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Expanded(child: Divider()),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Google Sign-In Button
                 OutlinedButton.icon(
                   onPressed: _handleGoogleSignIn,
@@ -249,9 +259,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

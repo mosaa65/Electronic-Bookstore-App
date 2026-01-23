@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/purchase_provider.dart';
+import '../auth/login_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('السلة'),
-      ),
+      appBar: AppBar(title: Text(l10n.get('cart'))),
       body: Consumer<CartProvider>(
         builder: (context, cartProvider, _) {
           if (cartProvider.items.isEmpty) {
@@ -26,12 +30,12 @@ class CartScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'السلة فارغة',
+                    l10n.get('emptyCart'),
                     style: Theme.of(context).textTheme.displayMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'أضف كتباً من المتجر',
+                    l10n.get('startShopping'),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
@@ -40,7 +44,7 @@ class CartScreen extends StatelessWidget {
                       Navigator.pop(context);
                     },
                     icon: const Icon(Icons.shopping_bag),
-                    label: const Text('تصفح المتجر'),
+                    label: Text(l10n.get('browseStore')),
                   ),
                 ],
               ),
@@ -106,7 +110,10 @@ class CartScreen extends StatelessWidget {
                       ),
                       // Delete Button
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: AppColors.errorColor),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: AppColors.errorColor,
+                        ),
                         onPressed: () {
                           cartProvider.removeFromCart(item.bookId);
                         },
@@ -121,6 +128,7 @@ class CartScreen extends StatelessWidget {
       ),
       bottomSheet: Consumer<CartProvider>(
         builder: (context, cartProvider, _) {
+          final l10n = AppLocalizations.of(context);
           if (cartProvider.items.isEmpty) return const SizedBox.shrink();
 
           return Container(
@@ -141,9 +149,9 @@ class CartScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'المجموع:',
-                      style: TextStyle(
+                    Text(
+                      '${l10n.get('total')}:',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -162,20 +170,62 @@ class CartScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implement checkout
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('تم إرسال الطلب (محاكاة)'),
-                          backgroundColor: AppColors.successColor,
-                        ),
+                    onPressed: () async {
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
                       );
-                      cartProvider.clearCart();
+
+                      if (!authProvider.isAuthenticated) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.get('loginToSeeLibrary')),
+                          ),
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final purchaseProvider = Provider.of<PurchaseProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final success = await purchaseProvider.checkoutCart(
+                        cartProvider.items,
+                        authProvider.currentUser!.uid,
+                      );
+
+                      if (context.mounted) {
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.get('purchaseSuccess')),
+                              backgroundColor: AppColors.successColor,
+                            ),
+                          );
+                          cartProvider.clearCart();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                purchaseProvider.errorMessage ??
+                                    l10n.get('error'),
+                              ),
+                              backgroundColor: AppColors.errorColor,
+                            ),
+                          );
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text('إتمام الشراء'),
+                    child: Text(l10n.get('checkout')),
                   ),
                 ),
               ],

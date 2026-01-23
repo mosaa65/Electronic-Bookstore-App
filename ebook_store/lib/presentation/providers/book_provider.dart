@@ -103,6 +103,12 @@ class BookProvider with ChangeNotifier {
     }
   }
 
+  // Clear filters and search
+  void clearFilters() {
+    _filteredBooks = _allBooks;
+    notifyListeners();
+  }
+
   // Add book (Admin)
   Future<bool> addBook(BookModel book) async {
     _setLoading(true);
