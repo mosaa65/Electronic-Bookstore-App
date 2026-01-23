@@ -85,6 +85,17 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      // Fallback: Check if user is actually signed in despite error
+      final currentUser = _authRepository.currentUser;
+      if (currentUser != null) {
+        debugPrint(
+          'DEBUG: Exception caught but user is signed in. Ignoring error.',
+        );
+        await _initializeUser();
+        _setLoading(false);
+        return true;
+      }
+
       _errorMessage = e.toString();
       debugPrint('DEBUG: Login exception: $e');
       _setLoading(false);
@@ -124,6 +135,19 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      // Fallback: Check if user is actually signed in despite error
+      final currentUser = _authRepository.currentUser;
+      if (currentUser != null) {
+        debugPrint(
+          'DEBUG: Register exception caught but user created. Ignoring error.',
+        );
+        // Ensure user data is set (might need manual set if Firestore write failed, but Auth ok)
+        // initializeUser handles fetching/creating local model
+        await _initializeUser();
+        _setLoading(false);
+        return true;
+      }
+
       _errorMessage = e.toString();
       debugPrint('DEBUG: Register exception: $e');
       _setLoading(false);

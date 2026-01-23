@@ -8,19 +8,13 @@ class PurchaseRepository {
   // Create a new purchase
   Future<void> createPurchase(PurchaseModel purchase) async {
     try {
-      final batch = _firestore.batch();
+      // تم إلغاء استخدام batch وتحديث العداد لتجنب مشاكل الأذونات الحالية
+      await _firestore
+          .collection('purchases')
+          .doc(purchase.id)
+          .set(purchase.toJson());
 
-      // 1. Create Purchase Doc
-      final purchaseRef = _firestore.collection('purchases').doc(purchase.id);
-      batch.set(purchaseRef, purchase.toJson());
-
-      // 2. Increment Book Purchase Count
-      final bookRef = _firestore.collection('books').doc(purchase.bookId);
-      batch.update(bookRef, {'purchaseCount': FieldValue.increment(1)});
-
-      await batch.commit();
-
-      debugPrint('Purchase created and count updated: ${purchase.id}');
+      debugPrint('Purchase created: ${purchase.id}');
     } catch (e) {
       debugPrint('Error creating purchase: $e');
       throw Exception('Failed to create purchase');
@@ -33,12 +27,17 @@ class PurchaseRepository {
       final snapshot = await _firestore
           .collection('purchases')
           .where('userId', isEqualTo: userId)
-          .orderBy('purchaseDate', descending: true)
+          // تم إزالة الترتيب في الاستعلام لتجنب الحاجة لفهرس معقد
           .get();
 
-      return snapshot.docs
+      final purchases = snapshot.docs
           .map((doc) => PurchaseModel.fromJson(doc.data(), doc.id))
           .toList();
+
+      // الترتيب محلياً بدلاً من السيرفر
+      purchases.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
+
+      return purchases;
     } catch (e) {
       debugPrint('Error getting user purchases: $e');
       throw Exception('Failed to get user purchases');

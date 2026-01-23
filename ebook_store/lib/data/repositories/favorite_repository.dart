@@ -9,7 +9,7 @@ class FavoriteRepository {
   String? get _userId => _auth.currentUser?.uid;
 
   CollectionReference get _favoritesRef =>
-      _firestore.collection('users').doc(_userId).collection('favorites');
+      _firestore.collection('favorites').doc(_userId).collection('books');
 
   /// إضافة كتاب للمفضلة
   Future<void> addToFavorites(BookModel book) async {
@@ -34,9 +34,15 @@ class FavoriteRepository {
   Stream<List<BookModel>> getFavoritesStream() {
     if (_userId == null) return Stream.value([]);
     return _favoritesRef.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return BookModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList().cast<BookModel>();
+      return snapshot.docs
+          .map((doc) {
+            return BookModel.fromMap(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
+          })
+          .toList()
+          .cast<BookModel>();
     });
   }
 }

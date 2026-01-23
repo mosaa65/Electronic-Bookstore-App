@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../../data/repositories/book_repository.dart';
 import 'settings_screen.dart';
 import '../library/favorites_screen.dart';
+import '../../providers/font_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -13,17 +14,13 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.get('profile')),
-      ),
+      appBar: AppBar(title: Text(l10n.get('profile'))),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           if (!authProvider.isAuthenticated) {
-            return Center(
-              child: Text(l10n.get('loginToSeeLibrary')),
-            );
+            return Center(child: Text(l10n.get('loginToSeeLibrary')));
           }
 
           final user = authProvider.currentUser!;
@@ -52,25 +49,22 @@ class ProfileScreen extends StatelessWidget {
                         )
                       : null,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Name
                 Text(
                   user.displayName,
                   style: Theme.of(context).textTheme.displayMedium,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Email
-                Text(
-                  user.email,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                
+                Text(user.email, style: Theme.of(context).textTheme.bodyMedium),
+
                 const SizedBox(height: 8),
-                
+
                 // Role Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -93,9 +87,9 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Stats
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -114,9 +108,9 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Action Buttons
                 _buildActionTile(
                   context,
@@ -125,13 +119,27 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const FavoritesScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
+                // Font Change Option
+                _buildActionTile(
+                  context,
+                  icon: Icons.font_download,
+                  title: 'تغيير الخط', // Change Font
+                  onTap: () {
+                    _showFontSelectionDialog(context);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
                 _buildActionTile(
                   context,
                   icon: Icons.settings,
@@ -139,15 +147,20 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 ListTile(
-                  leading: const Icon(Icons.logout, color: AppColors.errorColor),
+                  leading: const Icon(
+                    Icons.logout,
+                    color: AppColors.errorColor,
+                  ),
                   title: Text(l10n.get('logout')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
@@ -155,7 +168,9 @@ class ProfileScreen extends StatelessWidget {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: Text(l10n.get('logout')),
-                        content: Text(l10n.get('confirmDelete')), // Reusing generic confirm
+                        content: Text(
+                          l10n.get('confirmDelete'),
+                        ), // Reusing generic confirm
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -181,7 +196,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   tileColor: AppColors.errorColor.withOpacity(0.1),
                 ),
-                
+
                 if (user.isAdmin) ...[
                   const SizedBox(height: 24),
                   const Divider(),
@@ -199,17 +214,17 @@ class ProfileScreen extends StatelessWidget {
                     tileColor: Colors.blue.withOpacity(0.1),
                     iconColor: Colors.blue,
                     onTap: () async {
-                       try {
-                         final bookRepository = BookRepository();
-                         await bookRepository.seedBooks();
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text(l10n.get('dataSeeded'))),
-                         );
-                       } catch (e) {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text('${l10n.get('error')}: $e')),
-                         );
-                       }
+                      try {
+                        final bookRepository = BookRepository();
+                        await bookRepository.seedBooks();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.get('dataSeeded'))),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${l10n.get('error')}: $e')),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -234,9 +249,7 @@ class ProfileScreen extends StatelessWidget {
       title: Text(title),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       tileColor: tileColor ?? Colors.grey[100],
     );
   }
@@ -256,23 +269,76 @@ class ProfileScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            size: 32,
-            color: AppColors.primaryColor,
-          ),
+          Icon(icon, size: 32, color: AppColors.primaryColor),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.displayMedium,
-          ),
+          Text(value, style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
+    );
+  }
+
+  void _showFontSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer<FontProvider>(
+        builder: (context, fontProvider, _) {
+          return AlertDialog(
+            title: const Text('اختر نوع الخط'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildFontRadio(
+                  context,
+                  title: 'الخط الافتراضي (Cairo)',
+                  value: FontProvider.fontCairo,
+                  groupValue: fontProvider.currentFont,
+                  onChanged: (val) => fontProvider.changeFont(val!),
+                ),
+                _buildFontRadio(
+                  context,
+                  title: 'خط التجوال (Tajawal)',
+                  value: FontProvider.fontTajawal,
+                  groupValue: fontProvider.currentFont,
+                  onChanged: (val) => fontProvider.changeFont(val!),
+                ),
+                _buildFontRadio(
+                  context,
+                  title: 'خط المراعي (Almarai)',
+                  value: FontProvider.fontAlmarai,
+                  groupValue: fontProvider.currentFont,
+                  onChanged: (val) => fontProvider.changeFont(val!),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إغلاق'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFontRadio(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required String groupValue,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return RadioListTile<String>(
+      title: Text(title, style: TextStyle(fontFamily: value)),
+      value: value,
+      groupValue: groupValue,
+      onChanged: (val) {
+        onChanged(val);
+        Navigator.pop(context); // Close dialog on selection
+      },
     );
   }
 }

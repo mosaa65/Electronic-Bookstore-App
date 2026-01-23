@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -13,7 +12,9 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/book_provider.dart';
 import 'presentation/providers/cart_provider.dart';
 import 'presentation/providers/favorite_provider.dart';
+import 'presentation/providers/favorite_provider.dart';
 import 'presentation/providers/purchase_provider.dart';
+import 'presentation/providers/font_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/admin/admin_dashboard.dart';
@@ -53,10 +54,13 @@ class MyApp extends StatelessWidget {
         // مزود المفضلة
         ChangeNotifierProvider(create: (_) => FavoriteProvider()),
         // مزود المشتريات
+        // مزود المشتريات
         ChangeNotifierProvider(create: (_) => PurchaseProvider()),
+        // مزود الخطوط
+        ChangeNotifierProvider(create: (_) => FontProvider()),
       ],
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProvider, _) {
+      child: Consumer2<LocaleProvider, FontProvider>(
+        builder: (context, localeProvider, fontProvider, _) {
           return MaterialApp(
             // اسم التطبيق
             title: localeProvider.isArabic ? 'متجر الكتب' : 'eBook Store',
@@ -83,10 +87,16 @@ class MyApp extends StatelessWidget {
             // ========== الثيم ==========
 
             // الثيم الفاتح
-            theme: AppTheme.lightTheme(isArabic: localeProvider.isArabic),
+            theme: AppTheme.lightTheme(
+              isArabic: localeProvider.isArabic,
+              fontFamily: fontProvider.currentFont,
+            ),
 
             // الثيم الداكن (للمستقبل)
-            darkTheme: AppTheme.darkTheme(isArabic: localeProvider.isArabic),
+            darkTheme: AppTheme.darkTheme(
+              isArabic: localeProvider.isArabic,
+              fontFamily: fontProvider.currentFont,
+            ),
 
             // وضع الثيم
             themeMode: ThemeMode.light,
