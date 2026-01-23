@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
@@ -71,11 +73,11 @@ class MyApp extends StatelessWidget {
             supportedLocales: LocaleProvider.supportedLocales,
 
             // مندوب الترجمة المخصص
-            localizationsDelegates: [
+            localizationsDelegates: const [
               AppLocalizationsDelegate(),
-              // Fallback delegates for Material and Widgets
-              _MaterialLocalizationsDelegate(localeProvider.isArabic),
-              _WidgetsLocalizationsDelegate(localeProvider.isArabic),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
             ],
 
             // ========== الثيم ==========
@@ -119,42 +121,4 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-}
-
-// ========== Minimal Material Localizations ==========
-
-class _MaterialLocalizationsDelegate
-    extends LocalizationsDelegate<MaterialLocalizations> {
-  final bool isArabic;
-  _MaterialLocalizationsDelegate(this.isArabic);
-
-  @override
-  bool isSupported(Locale locale) => true;
-
-  @override
-  Future<MaterialLocalizations> load(Locale locale) async {
-    return DefaultMaterialLocalizations();
-  }
-
-  @override
-  bool shouldReload(_MaterialLocalizationsDelegate old) =>
-      old.isArabic != isArabic;
-}
-
-class _WidgetsLocalizationsDelegate
-    extends LocalizationsDelegate<WidgetsLocalizations> {
-  final bool isArabic;
-  _WidgetsLocalizationsDelegate(this.isArabic);
-
-  @override
-  bool isSupported(Locale locale) => true;
-
-  @override
-  Future<WidgetsLocalizations> load(Locale locale) async {
-    return DefaultWidgetsLocalizations();
-  }
-
-  @override
-  bool shouldReload(_WidgetsLocalizationsDelegate old) =>
-      old.isArabic != isArabic;
 }
